@@ -29,9 +29,9 @@ def get_batch(split):
     return x, y
 
 xb, yb = get_batch('train')
-print(xb.shape)
-print(xb[0])
-print(yb[0])
+# print(xb.shape)
+# print(xb[0])
+# print(yb[0])
 
 class BigramModel(nn.Module):
     def __init__(self, vocab_size):
@@ -46,8 +46,30 @@ class BigramModel(nn.Module):
             loss = F.cross_entropy(logits.view(B*T, C), targets.view(B*T))
         return logits, loss
 
-model = BigramModel(vocab_size)     # model
-xb, yb = get_batch('train')         # grab one batch
-logits, loss = model(xb, yb)        # forward pass — no training
-print(logits.shape)                 # torch.Size([4, 8, 50])
-print(loss.item())                  # the number we're checking
+#Model creation. And took one batch . Forward pass without training, torch.Size([4, 8, 50]), and with the number we are checking
+# model = BigramModel(vocab_size)
+# xb, yb = get_batch('train')
+# logits, loss = model(xb, yb)
+# print(logits.shape)
+# print(loss.item())
+
+
+model = BigramModel(vocab_size)
+optimizer = torch.optim.Adam(model.parameters(), lr= 3e-3)
+
+for step in range(3000):
+    xb, yb = get_batch('train')
+    logits, loss = model(xb, yb)
+    optimizer.zero_grad(set_to_none=True)
+    loss.backward()
+    optimizer.step()
+    if step % 500 == 0:
+        print(step, loss.item())
+
+
+idx = torch.zeros((1, 1), dtype=torch.long)      # start token
+for _ in range(200):
+    logits, _ = model(idx)
+    probs = F.softmax(logits[:, -1, :], dim=-1)  # distribution over next char
+    idx = torch.cat([idx, torch.multinomial(probs, 1)], dim=1)  # sample, append
+print(decode(idx[0].tolist()))
