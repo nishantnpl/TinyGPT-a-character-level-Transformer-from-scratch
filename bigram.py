@@ -1,19 +1,17 @@
+from tokenizer import CharTokenizer
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 torch.manual_seed(1337)
 
+#text = open('data.txt', encoding='utf-8').read()
+
 text = open('data.txt', encoding='utf-8').read()
-chars = sorted(set(text))
-vocab_size = len(chars)
+tokenizer = CharTokenizer(text)
+vocab_size = tokenizer.vocab_size
 
-stoi = {ch: i for i, ch in enumerate(chars)} # char -> id
-iots = {i: ch for i, ch in enumerate(chars)} # id -> char tokenized in both direction
-
-encode = lambda s: [stoi[ch] for ch in s]
-decode = lambda l: ''.join(iots[i]for i in l)
-
-data = torch.tensor(encode(text), dtype=torch.long) # whole corpse as one int tensor
+data = torch.tensor(tokenizer.encode(text), dtype=torch.long)  # whole corpse as one int tensor
 n = int(0.9 * len(data))
 train_data, val_data =data[:n], data[n:]
 
@@ -55,7 +53,7 @@ class BigramModel(nn.Module):
 
 
 model = BigramModel(vocab_size)
-optimizer = torch.optim.Adam(model.parameters(), lr= 3e-3)
+optimizer = torch.optim.AdamW(model.parameters(), lr= 3e-3)
 
 for step in range(3000):
     xb, yb = get_batch('train')
@@ -72,4 +70,4 @@ for _ in range(200):
     logits, _ = model(idx)
     probs = F.softmax(logits[:, -1, :], dim=-1)  # distribution over next char
     idx = torch.cat([idx, torch.multinomial(probs, 1)], dim=1)  # sample, append
-print(decode(idx[0].tolist()))
+print(tokenizer.decode(idx[0].tolist()))
