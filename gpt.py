@@ -18,6 +18,7 @@ train_data, val_data =data[:n], data[n:] # train validation split
 #Batching Function
 block_size = 8
 batch_size = 4
+n_embd = 64
 
 def get_batch(split):
     d = train_data if split == 'train' else val_data
@@ -31,13 +32,19 @@ xb, yb = get_batch('train')
 # print(xb[0])
 # print(yb[0])
 
-class BigramModel(nn.Module):
-    def __init__(self, vocab_size):
+class GPTModel(nn.Module):
+    def __init__(self):
         super().__init__()
-        self.token_embedding_table = nn.Embedding(vocab_size, vocab_size)
+        self.token_embedding_table = nn.Embedding(vocab_size, n_embd)
+        self.position_embedding_table = nn.Embedding(block_size, n_embd)
+        self.lm_head = nn.Linear(n_embd, vocab_size)
 
-    def forward(self, idx, targets= None):
-        logits = self.token_embedding_table(idx)    # B, T -> (B, T, vocab_size)
+    def forward(self, idx, targets=None):
+        B, T = idx.shape
+        tok_emb = self.token_embedding_table(idx)                    # (B, T, 64)
+        pos_emb = self.position_embedding_table(torch.arange(T))     # (T, 64)
+        x = tok_emb + pos_emb                                        # (B, T, 64)
+        logits = self.lm_head(x)                                     # (B, T, 50)
         loss = None
         if targets is not None:
             B, T, C = logits.shape
@@ -52,7 +59,7 @@ class BigramModel(nn.Module):
 # print(loss.item())
 
 
-model = BigramModel(vocab_size)
+model = GPTModel()
 optimizer = torch.optim.AdamW(model.parameters(), lr= 3e-3)
 
 for step in range(3000):
